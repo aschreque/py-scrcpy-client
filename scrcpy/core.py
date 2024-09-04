@@ -26,7 +26,7 @@ from .control import ControlSender
 #from demuxer.c
 SC_PACKET_FLAG_CONFIG = 1 << 63
 SC_PACKET_FLAG_KEY_FRAME = 1 << 62
-SC_PACKET_PTS_MASK = SC_PACKET_FLAG_KEY_FRAME - 1
+SC_PACKET_PTS_MASK = 0xBFFFFFFFFFFFFFFF
 
 #from av/ffmpeg ==> needs to check in python av
 AV_NOPTS_VALUE = 0x8000000000000000
@@ -37,6 +37,12 @@ from enum import Enum , auto
 
 class Codec(Enum) :
     SC_CODEC_H264= auto()
+    SC_CODEC_H265 = auto()
+    SC_CODEC_AV1=auto()
+    SC_CODEC_OPUS= auto()
+    SC_CODEC_AAC = auto()
+    SC_CODEC_FLAC=auto()
+    SC_CODEC_RAW=auto()
 
 
 
@@ -198,7 +204,12 @@ class Client:
             if not len ( self.device_name ) :
                 raise ConnectionError ( "Did not receive Device Name!" )
             codec = self.__audio_socket.recv ( 4 )
-            self.codec = self.codec_handler(codec.decode("utf-8"))
+            codec_str = codec.decode ( "utf-8" )
+            if (not codec_str[0].isalpha()):
+                codec_str = codec_str[1:]
+            self.codec =codec_str
+            #check if codec is supported
+            self.codec_handler (self.codec )
 
             #self.__audio_socket.setblocking ( False )
 
@@ -250,7 +261,7 @@ class Client:
                 "show_touches=false" ,
                 "stay_awake=false" ,
                 "power_off_on_close=false" ,
-                "clipboard_autosync=false"
+                "clipboard_autosync=false",
             ]
 
         self.__server_stream: AdbConnection = self.device.shell(
@@ -349,30 +360,41 @@ class Client:
                         raise e
             elif self.recording_mode == Recording_mode.NO_VIDEO :
                 try:
-                    windows_size = 30
+                    windows_size = 10
                     packets = []
                     while(windows_size > 0 and self.alive):
                         pts_header_buffer =  self.__audio_socket.recv ( 8 )
                         if pts_header_buffer == b"" :
                             raise ConnectionError ( "Audio stream is disconnected" )
 
-                        pts_flags = struct.unpack(">Q", pts_header_buffer)
+                        pts_flags = struct.unpack(">Q", pts_header_buffer)[0]
 
-                        #TODO check flags from packet and adapt config
-                        #if (pts_flags & SC_PACKET_FLAG_CONFIG) :
-                        #    pts = AV_NOPTS_VALUE
-                        #else:
-                        #    pts = pts_flags & SC_PACKET_PTS_MASK
-
-                        #if (pts_flags & SC_PACKET_FLAG_KEY_FRAME) :
-                        #    flags = flags | AV_PKT_FLAG_KEY
 
                         len_packet_byte_val =  self.__audio_socket.recv ( 4 )
                         len_packet = int.from_bytes ( len_packet_byte_val , "big" )
 
                         packet_buffer =  self.__audio_socket.recv ( len_packet )
                         packets_in_window = codec.parse(packet_buffer)
-                        packets = packets + packets_in_window
+
+                        isConfig = False
+                        if (pts_flags & SC_PACKET_FLAG_CONFIG) :
+                            pts = AV_NOPTS_VALUE
+                            isConfig = True
+                        else:
+                            pts = pts_flags & SC_PACKET_PTS_MASK
+
+                        isKeyFrame = False
+                        if (pts_flags & SC_PACKET_FLAG_KEY_FRAME) :
+                            isKeyFrame = True
+
+                        for raw_packet in packets_in_window:
+                            raw_packet.pts = pts
+                            raw_packet.dts = pts
+                            if isKeyFrame :
+                                raw_packet.is_keyframe = isKeyFrame
+
+                            if not isConfig :
+                                packets .append(raw_packet)
                         windows_size -=1
 
 
