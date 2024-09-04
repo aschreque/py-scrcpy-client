@@ -233,7 +233,7 @@ class Client:
         server_file_path = os.path.join(
             os.path.abspath(os.path.dirname(__file__)), jar_name
         )
-        self.device.sync.push(server_file_path, f"/data/local/tmp/{jar_name}")
+        self.device.sync.push(server_file_path, f"/data/local/tmp/{jar_name}" )
         if (self.recording_mode == Recording_mode.NO_AUDIO):
             commands = [
                 f"CLASSPATH=/data/local/tmp/{jar_name}",
@@ -256,7 +256,7 @@ class Client:
                 "power_off_on_close=false",
                 "clipboard_autosync=false",
             ]
-        elif (self.recording_mode == Recording_mode.NO_VIDEO):
+        elif (self.recording_mode == Recording_mode.NO_VIDEO) :
             commands = [
                 f"CLASSPATH=/data/local/tmp/{jar_name}" ,
                 "app_process" ,
@@ -268,12 +268,12 @@ class Client:
                 "send_frame_meta=true" ,
                 "control=true" ,
                 "audio=true" ,
-                "audio_codec=flac",
-                "video=false",
+                "audio_codec=flac" ,
+                "video=false" ,
                 "show_touches=false" ,
                 "stay_awake=false" ,
                 "power_off_on_close=false" ,
-                "clipboard_autosync=false",
+                "clipboard_autosync=false" ,
             ]
         print(commands)
 

@@ -61,3 +61,6 @@ target/
 adb
 
 pyside-setup/
+/tests/*.flac
+/tests/*.mp3
+/tests/*.wav
