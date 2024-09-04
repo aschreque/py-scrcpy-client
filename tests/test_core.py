@@ -3,10 +3,7 @@ import pickle
 from io import BytesIO
 from time import sleep
 
-import av
 import pytest
-from adbutils import AdbError
-from av import Packet
 
 from scrcpy import Client , Recording_mode  , EVENT_FRAME
 from tests.utils import FakeStream
@@ -132,29 +129,3 @@ def test_parse_audio():
     # Create client
     client = Client(device=FakeADBDevice(data), recording_mode = Recording_mode.NO_VIDEO)
 
-#to remove
-def test_parse_audio_live():
-    output = av.open("opus_stream.ogg", "w")
-
-    out_stream = output.add_stream ("vorbis"  )
-    def on_audio_stream(buffer:list[Packet] ):
-        for packet in buffer :
-            if packet.dts is None :
-                continue
-            packet.stream = out_stream
-
-            output.mux ( packet )
-        print(f"write buffer {len(buffer)}")
-        pass
-
-    # Create client
-    client = Client(device="emulator-5554", recording_mode = Recording_mode.NO_VIDEO)
-    client.add_listener(EVENT_FRAME, on_audio_stream)
-    client.start(threaded = True)
-
-
-    sleep(10)
-    client.stop()
-    sleep ( 1 )
-
-    output.close()
